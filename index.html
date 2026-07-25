@@ -1,142 +1,759 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Economy Map - Geopolitic Dashboard</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Economy Map & Geopolitical Dashboard</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background-color: #1b365d;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    #map {
+      width: 100%;
+      height: 100vh;
+      background: transparent !important;
+    }
     
-    <style>
-        body { margin: 0; padding: 0; background-color: #1a1d24; }
-        #map { width: 100vw; height: 100vh; }
-        .leaflet-container { background-color: #1a1d24 !important; }
+    /* BREAKING NEWS TICKER BAR */
+    #news-ticker-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 38px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 2px solid #e74c3c;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .ticker-badge {
+      background: #e74c3c;
+      color: #ffffff;
+      padding: 0 16px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      font-weight: bold;
+      font-size: 12px;
+      letter-spacing: 1px;
+      white-space: nowrap;
+      box-shadow: 3px 0 10px rgba(0,0,0,0.4);
+      z-index: 2;
+    }
+    .ticker-wrap {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+    .ticker-move {
+      display: inline-block;
+      white-space: nowrap;
+      animation: ticker 85s linear infinite;
+      padding-left: 100%;
+    }
+    .ticker-move:hover {
+      animation-play-state: paused;
+    }
+    .ticker-item {
+      display: inline-block;
+      padding: 0 25px;
+      font-size: 13px;
+      color: #f1f2f6;
+      cursor: pointer;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .ticker-item:hover {
+      color: #00d2d3;
+      text-decoration: underline;
+    }
+    .ticker-country {
+      color: #ffa801;
+      font-weight: bold;
+      margin-right: 6px;
+    }
 
-        /* Label Negara */
-        .country-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            font-weight: bold;
-            color: #ffffff !important;
-            font-size: 10px;
-            text-shadow: 1px 1px 3px #000000, -1px -1px 3px #000000 !important;
-            pointer-events: none;
-        }
-        .leaflet-tooltip::before { display: none !important; }
+    @keyframes ticker {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
 
-        /* Label Samudra */
-        .ocean-label {
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            color: rgba(255, 255, 255, 0.2) !important;
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            pointer-events: none;
-        }
+    /* SEARCH BAR OVERLAY & DROPDOWN RESULT */
+    #search-container {
+      position: fixed;
+      top: 50px;
+      right: 20px;
+      z-index: 998;
+      width: 320px;
+      background: rgba(15, 23, 42, 0.92);
+      padding: 8px 12px;
+      border-radius: 8px;
+      backdrop-filter: blur(8px);
+      border: 1px solid #485460;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      box-sizing: border-box;
+    }
+    #search-input {
+      width: 100%;
+      background: #2f3640;
+      border: 1px solid #485460;
+      color: #f5f6fa;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    #search-input:focus {
+      border-color: #00d2d3;
+    }
+    #search-results {
+      display: none;
+      max-height: 260px;
+      overflow-y: auto;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid #00d2d3;
+      border-radius: 6px;
+      margin-top: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+    }
+    .search-result-item {
+      padding: 9px 12px;
+      font-size: 12px;
+      color: #f1f2f6;
+      cursor: pointer;
+      border-bottom: 1px solid #2f3640;
+      transition: background 0.2s, color 0.2s;
+      line-height: 1.4;
+    }
+    .search-result-item:last-child {
+      border-bottom: none;
+    }
+    .search-result-item:hover {
+      background: #00d2d3;
+      color: #0f172a;
+    }
+    .search-result-country {
+      font-weight: bold;
+      color: #ffa801;
+      margin-right: 6px;
+    }
+    .search-result-item:hover .search-result-country {
+      color: #0f172a;
+    }
 
-        /* Titik Strategis */
-        .strategic-point {
-            background-color: #f1c40f !important;
-            border: 2px solid #ffffff !important;
-            border-radius: 50%;
-        }
-    </style>
+    /* MAP UI & LABELS */
+    .country-label {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 10px;
+      text-shadow: 1px 1px 2px #000, -1px -1px 2px #000;
+    }
+    .ocean-label {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: #74b9ff;
+      font-weight: bold;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .strategic-point {
+      background-color: #f39c12;
+      border: 2px solid #fff;
+      border-radius: 50%;
+    }
+
+    /* MODAL POPUP */
+    #news-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .modal-content {
+      background: #2f3640;
+      color: #f5f6fa;
+      width: 100%;
+      max-width: 600px;
+      max-height: 85vh;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      overflow-y: auto;
+      position: relative;
+    }
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #f5f6fa;
+    }
+    .modal-header-title {
+      font-size: 18px;
+      border-bottom: 2px solid #485460;
+      padding-bottom: 8px;
+      margin-top: 0;
+      color: #00d2d3;
+    }
+    .climate-badge-box {
+      background: #353b48;
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      border-left: 4px solid #00d2d3;
+    }
+    .news-card {
+      background: #353b48;
+      border-radius: 6px;
+      padding: 12px 15px;
+      margin-bottom: 12px;
+    }
+    .news-header-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .news-title {
+      margin: 0;
+      font-size: 15px;
+      color: #f5f6fa;
+    }
+    .threat-tag {
+      font-size: 10px;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .threat-high { background: #e74c3c; color: white; }
+    .threat-medium { background: #f39c12; color: white; }
+    .threat-low { background: #26af5f; color: white; }
+
+    .news-desc {
+      margin: 6px 0 10px 0;
+      font-size: 13px;
+      color: #dcdde1;
+      line-height: 1.4;
+    }
+    .news-link {
+      display: inline-block;
+      font-size: 12px;
+      color: #00d2d3;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .news-link:hover {
+      text-decoration: underline;
+    }
+    .btn-news {
+      display: block;
+      width: 100%;
+      background: #009432;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+      text-align: center;
+    }
+    .btn-news:hover {
+      background: #10ac84;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="map"></div>
+  <!-- BREAKING NEWS TICKER BAR -->
+  <div id="news-ticker-container">
+    <div class="ticker-badge">🔴 BREAKING NEWS</div>
+    <div class="ticker-wrap">
+      <div class="ticker-move" id="ticker-content">
+        <span class="ticker-item">Menghubungkan ke jaringan intelijen berita...</span>
+      </div>
+    </div>
+  </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- SEARCH BAR OVERLAY WITH DROPDOWN RESULTS -->
+  <div id="search-container">
+    <input type="text" id="search-input" placeholder="Cari Negara / Isu (misal: Minyak)..." oninput="handleSearchInput()" />
+    <div id="search-results"></div>
+  </div>
 
-    <script>
-        // 1. Inisialisasi Peta
-        var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
-        var geojsonUrl = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
-        var apiUrl = 'https://script.google.com/macros/s/AKfycbyvAC2vpgKNoaDCl89Tm7GiPi09qIqvHbYeG79vVC66XTAQypK-eQi48-aOo3XWJQ/exec'; 
+  <!-- PETA LEAFLET -->
+  <div id="map"></div>
 
-        var dataMakro = [];
+  <!-- MODAL POPUP BERITA -->
+  <div id="news-modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <div id="modal-body"></div>
+    </div>
+  </div>
 
-        function getColor(isoCode) {
-            var negara = dataMakro.find(n => n.Kode_ISO === isoCode);
-            return (negara && negara.Status_Konflik === 'ON') ? '#e74c3c' : '#d1d8e0'; 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    var map = L.map('map', { zoomControl: false }).setView([20, 0], 2);
+    var geojsonUrl = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries.geo.json';
+    var apiUrl = 'https://script.google.com/macros/s/AKfycbyvAC2vpgKNoaDCl89Tm7GiPi09qIqvHbYeG79vVC66XTAQypK-eQi48-aOo3XWJQ/exec'; 
+
+    var dataMakro = [];
+    var dataNews = []; 
+    var dataConfig = [];
+    var mapGeoJsonLayer = null;
+
+    function getSeasonInfo(zoneType) {
+      var month = new Date().getMonth(); 
+      if (zoneType === "TROPICAL_MONSOON") {
+        if (month >= 4 && month <= 9) return { icon: "☀️", name: "Musim Kemarau (Dry Season)" };
+        return { icon: "🌧️", name: "Musim Hujan (Wet Season)" };
+      } else if (zoneType === "NORTH_4SEASONS") {
+        if (month === 11 || month === 0 || month === 1) return { icon: "❄️", name: "Musim Dingin (Winter)" };
+        if (month >= 2 && month <= 4) return { icon: "🌱", name: "Musim Semi (Spring)" };
+        if (month >= 5 && month <= 7) return { icon: "☀️", name: "Musim Panas (Summer)" };
+        return { icon: "🍁", name: "Musim Gugur (Autumn)" };
+      } else if (zoneType === "SOUTH_4SEASONS") {
+        if (month === 11 || month === 0 || month === 1) return { icon: "☀️", name: "Musim Panas (Summer)" };
+        if (month >= 2 && month <= 4) return { icon: "🍁", name: "Musim Gugur (Autumn)" };
+        if (month >= 5 && month <= 7) return { icon: "❄️", name: "Musim Dingin (Winter)" };
+        return { icon: "🌱", name: "Musim Semi (Spring)" };
+      } else if (zoneType === "DESERT") {
+        if (month >= 4 && month <= 8) return { icon: "🌵", name: "Gurun Panas Ekstrem" };
+        return { icon: "🏜️", name: "Gurun Hangat/Sejuk" };
+      }
+      return { icon: "🌍", name: "Iklim Normal / Subtropis" };
+    }
+
+    function getColor(isoCode) {
+      var newsForCountry = dataNews.filter(b => b.Kode_ISO === isoCode);
+      if (newsForCountry.length > 0) {
+        var latestNews = newsForCountry[newsForCountry.length - 1]; 
+        var level = (latestNews.Threat_Level || latestNews.threat_level || "").toUpperCase();
+        
+        if (level === 'HIGH') return '#e74c3c';   
+        if (level === 'MEDIUM') return '#f39c12'; 
+        if (level === 'LOW') return '#26af5f';    
+      }
+
+      var negara = dataMakro.find(n => n.Kode_ISO === isoCode);
+      if (negara && negara.Status_Konflik === 'ON') {
+        return '#e74c3c';
+      }
+      return '#26af5f'; 
+    }
+
+    function styleNegara(feature) {
+      return { fillColor: getColor(feature.id), weight: 1, opacity: 1, color: '#1e3799', fillOpacity: 0.9 };
+    }
+
+    function onEachFeature(feature, layer) {
+      var negara = dataMakro.find(n => n.Kode_ISO === feature.id);
+      var customCenters = {
+        "RUS": [61.5, 90.0], "USA": [37.0, -95.7], "CAN": [56.1, -106.3], 
+        "FRA": [46.2, 2.2], "IDN": [-0.78, 113.92], "CHN": [35.8, 104.1], 
+        "AUS": [-25.2, 133.7], "BRA": [-14.2, -51.9], "ZAF": [-30.5, 22.9],
+        "JPN": [36.2, 138.2], "MYS": [4.2, 101.9], "VNM": [16.0, 108.0],
+        "NOR": [60.4, 8.4], "PRK": [40.3, 127.5], "SOM": [5.1, 46.1],
+        "IRQ": [33.2, 43.6], "IRN": [32.4, 53.6], "UKR": [48.3, 31.1],
+        "CHE": [46.8, 8.2], "THA": [15.8, 100.9], "TWN": [23.7, 121.0], 
+        "GRL": [72.0, -40.0], "EGY": [26.8, 30.8], "ITA": [42.0, 12.5], 
+        "GRC": [38.5, 22.5], "SYR": [34.8, 38.0], "JOR": [30.5, 36.5]
+      };
+      
+      var centerLatLng = customCenters[feature.id] ? customCenters[feature.id] : layer.getBounds().getCenter();
+
+      if (negara) {
+        L.tooltip({ permanent: true, direction: 'center', className: 'country-label', opacity: 0.9 })
+        .setLatLng(centerLatLng).setContent(negara.Negara).addTo(map);
+
+        layer.bindPopup(`
+          <div style="font-family: Arial, sans-serif; min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; border-bottom: 1px solid #ddd; padding-bottom: 4px;">${negara.Negara}</h3>
+            <p style="margin: 4px 0; font-size: 13px;"><strong>Ekspor:</strong> ${negara.Keunggulan_Ekspor || '-'}</p>
+            <p style="margin: 4px 0; font-size: 13px;"><strong>Impor:</strong> ${negara.Kebutuhan_Impor || '-'}</p>
+            <p style="margin: 4px 0; font-size: 13px;"><strong>Rantai Pasok:</strong> ${negara.Korelasi_Rantai_Pasok || '-'}</p>
+            <p style="margin: 8px 0 0 0; font-size: 12px; text-align: center; border-radius: 4px; padding: 4px; background-color: ${negara.Status_Konflik === 'ON' ? '#ffeaa7' : '#dff9fb'};">
+              Status: <strong>${negara.Status_Konflik === 'ON' ? '⚠️ KONFLIK' : '✅ STABIL'}</strong>
+            </p>
+            <button class="btn-news" onclick="openModal('${feature.id}')">📰 Lihat Berita & Analisis Terbaru</button>
+          </div>
+        `);
+      } else {
+        layer.bindPopup("<b style='font-family:Arial;'>" + feature.properties.name + "</b><br/>Data belum dipantau.");
+      }
+    }
+
+    /* DROPDOWN INTERAKTIF PENCARIAN & FLY-TO */
+    function handleSearchInput() {
+      var query = document.getElementById('search-input').value.trim().toLowerCase();
+      var resultsContainer = document.getElementById('search-results');
+
+      if (!query || query.length < 2) {
+        resultsContainer.style.display = 'none';
+        resultsContainer.innerHTML = '';
+        return;
+      }
+
+      var itemsHtml = '';
+      var foundCount = 0;
+
+      var matchedCountries = dataMakro.filter(n => 
+        (n.Negara && n.Negara.toLowerCase().includes(query)) || 
+        (n.Kode_ISO && n.Kode_ISO.toLowerCase() === query)
+      );
+
+      matchedCountries.forEach(n => {
+        foundCount++;
+        itemsHtml += `
+          <div class="search-result-item" onclick="selectSearchCountry('${n.Kode_ISO}')">
+            <span class="search-result-country">[${n.Kode_ISO}]</span> <strong>${n.Negara}</strong> (Profil Negara)
+          </div>
+        `;
+      });
+
+      var matchedNews = dataNews.filter(b => 
+        (b.Judul_Berita && b.Judul_Berita.toLowerCase().includes(query)) ||
+        (b.Ringkasan_Berita && b.Ringkasan_Berita.toLowerCase().includes(query))
+      );
+
+      matchedNews.slice().reverse().slice(0, 8).forEach(b => {
+        foundCount++;
+        var countryLabel = b.Negara || b.Kode_ISO || "GLOBAL";
+        var iso = b.Kode_ISO || "GLOBAL";
+        var title = b.Judul_Berita || "Tanpa Judul";
+
+        itemsHtml += `
+          <div class="search-result-item" onclick="selectSearchNews('${iso}')">
+            <span class="search-result-country">[${countryLabel}]</span> ${title}
+          </div>
+        `;
+      });
+
+      if (foundCount > 0) {
+        resultsContainer.innerHTML = itemsHtml;
+        resultsContainer.style.display = 'block';
+      } else {
+        resultsContainer.innerHTML = `<div class="search-result-item" style="cursor:default; color:#95a5a6;">Tidak ada hasil untuk "${query}"</div>`;
+        resultsContainer.style.display = 'block';
+      }
+    }
+
+    function selectSearchCountry(isoCode) {
+      document.getElementById('search-results').style.display = 'none';
+      if (!mapGeoJsonLayer) return;
+
+      var targetLayer = null;
+      mapGeoJsonLayer.eachLayer(function(layer) {
+        if (layer.feature && layer.feature.id === isoCode) {
+          targetLayer = layer;
+        }
+      });
+
+      if (targetLayer) {
+        map.flyToBounds(targetLayer.getBounds(), { maxZoom: 5, duration: 1.5 });
+        setTimeout(() => { targetLayer.openPopup(); }, 1500);
+      }
+    }
+
+    function selectSearchNews(isoCode) {
+      document.getElementById('search-results').style.display = 'none';
+
+      if (isoCode === "GLOBAL") {
+        openGlobalModal();
+        return;
+      }
+
+      if (!mapGeoJsonLayer) return;
+
+      var targetLayer = null;
+      mapGeoJsonLayer.eachLayer(function(layer) {
+        if (layer.feature && layer.feature.id === isoCode) {
+          targetLayer = layer;
+        }
+      });
+
+      if (targetLayer) {
+        map.flyToBounds(targetLayer.getBounds(), { maxZoom: 5, duration: 1.5 });
+        setTimeout(() => { 
+          openModal(isoCode); 
+        }, 1500);
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      var container = document.getElementById('search-container');
+      if (container && !container.contains(e.target)) {
+        document.getElementById('search-results').style.display = 'none';
+      }
+    });
+
+    /* FUNGSI HANDLER MODAL NEGARA & GLOBAL */
+    function openModal(isoCode) {
+      if (isoCode === "GLOBAL") {
+        openGlobalModal();
+        return;
+      }
+
+      var negara = dataMakro.find(n => n.Kode_ISO === isoCode);
+      if (!negara) return;
+
+      var regionAcuan = negara.Region_Acuan || "Belum Diatur di Sheet";
+      var tipeZona = negara.Tipe_Zona_Iklim || "TROPICAL_MONSOON";
+      var catatanGeo = negara.Catatan_Geografi || "Belum ada catatan geografi di Sheet.";
+      
+      var listBerita = dataNews.filter(b => b.Kode_ISO === isoCode).reverse();
+      var beritaHtml = "";
+
+      if (listBerita.length > 0) {
+        listBerita.forEach(b => {
+          let finalLink = (b.Link_Berita || "").trim();
+          if (finalLink !== "" && finalLink !== "#" && !finalLink.startsWith("http")) {
+            finalLink = "https://" + finalLink;
+          }
+
+          var threat = (b.Threat_Level || b.threat_level || "LOW").toUpperCase();
+          var borderStyle = "border-left: 4px solid #26af5f;";
+          var tagBadge = `<span class="threat-tag threat-low">🟢 STABIL</span>`;
+
+          if (threat === "HIGH") {
+            borderStyle = "border-left: 4px solid #e74c3c;";
+            tagBadge = `<span class="threat-tag threat-high">🔴 HIGH RISK</span>`;
+          } else if (threat === "MEDIUM") {
+            borderStyle = "border-left: 4px solid #f39c12;";
+            tagBadge = `<span class="threat-tag threat-medium">🟡 MEDIUM RISK</span>`;
+          }
+
+          beritaHtml += `
+            <div class="news-card" style="${borderStyle}">
+              <div class="news-header-flex">
+                <h4 class="news-title">${b.Judul_Berita || "Tanpa Judul"}</h4>
+                ${tagBadge}
+              </div>
+              <p class="news-desc">${b.Ringkasan_Berita || ""}</p>
+              ${(finalLink !== "") ? `<a href="${finalLink}" target="_blank" class="news-link">Baca Artikel Selengkapnya &rarr;</a>` : ''}
+            </div>
+          `;
+        });
+      } else {
+        beritaHtml = `
+          <div class="news-card" style="border-left: 4px solid #00d2d3;">
+            <h4 class="news-title">BELUM ADA BERITA TERBARU</h4>
+            <p class="news-desc">Belum ada pembaruan geopolitik untuk negara ini.</p>
+          </div>
+        `;
+      }
+
+      var season = getSeasonInfo(tipeZona);
+      var modalBody = document.getElementById('modal-body');
+
+      modalBody.innerHTML = `
+        <h2 class="modal-header-title">📊 ANALISIS GEOPOLITIK & IKLIM: ${negara.Negara}</h2>
+        
+        <div class="climate-badge-box">
+          <div><strong>🌡️ Status Musim Saat Ini:</strong> ${season.icon} ${season.name}</div>
+          <div><strong>📍 Region Acuan:</strong> ${regionAcuan}</div>
+          <div style="color: #95a5a6; margin-top: 4px;"><em>ℹ️ Note: ${catatanGeo}</em></div>
+        </div>
+
+        <h3 style="color: #ecf0f1; font-size: 16px; margin-bottom: 12px;">📰 Berita & Isu Strategis Terupdate:</h3>
+        ${beritaHtml}
+      `;
+
+      document.getElementById('news-modal').style.display = 'flex';
+    }
+
+    /* MODAL KHUSUS BERITA GLOBAL */
+    function openGlobalModal() {
+      var listBerita = dataNews.filter(b => b.Kode_ISO === "GLOBAL").reverse();
+      var beritaHtml = "";
+
+      if (listBerita.length > 0) {
+        listBerita.forEach(b => {
+          let finalLink = (b.Link_Berita || "").trim();
+          if (finalLink !== "" && finalLink !== "#" && !finalLink.startsWith("http")) {
+            finalLink = "https://" + finalLink;
+          }
+
+          var threat = (b.Threat_Level || b.threat_level || "LOW").toUpperCase();
+          var borderStyle = "border-left: 4px solid #26af5f;";
+          var tagBadge = `<span class="threat-tag threat-low">🟢 STABIL</span>`;
+
+          if (threat === "HIGH") {
+            borderStyle = "border-left: 4px solid #e74c3c;";
+            tagBadge = `<span class="threat-tag threat-high">🔴 HIGH RISK</span>`;
+          } else if (threat === "MEDIUM") {
+            borderStyle = "border-left: 4px solid #f39c12;";
+            tagBadge = `<span class="threat-tag threat-medium">🟡 MEDIUM RISK</span>`;
+          }
+
+          beritaHtml += `
+            <div class="news-card" style="${borderStyle}">
+              <div class="news-header-flex">
+                <h4 class="news-title">${b.Judul_Berita || "Tanpa Judul"}</h4>
+                ${tagBadge}
+              </div>
+              <p class="news-desc">${b.Ringkasan_Berita || ""}</p>
+              ${(finalLink !== "") ? `<a href="${finalLink}" target="_blank" class="news-link">Baca Artikel Selengkapnya &rarr;</a>` : ''}
+            </div>
+          `;
+        });
+      } else {
+        beritaHtml = `
+          <div class="news-card" style="border-left: 4px solid #00d2d3;">
+            <h4 class="news-title">BELUM ADA BERITA GLOBAL</h4>
+            <p class="news-desc">Belum ada isu makro dunia saat ini.</p>
+          </div>
+        `;
+      }
+
+      var modalBody = document.getElementById('modal-body');
+      modalBody.innerHTML = `
+        <h2 class="modal-header-title">🌐 LAPORAN INTELIJEN MAKRO GLOBAL</h2>
+        
+        <div class="climate-badge-box">
+          <div><strong>📍 Cakupan Isu:</strong> Perdagangan Internasional, Komoditas Global, & Organisasi Multinegara</div>
+          <div style="color: #95a5a6; margin-top: 4px;"><em>ℹ️ Berita makro ini mempengaruhi iklim ekonomi dunia secara umum.</em></div>
+        </div>
+
+        <h3 style="color: #ecf0f1; font-size: 16px; margin-bottom: 12px;">📰 Isu Strategis Global Terupdate:</h3>
+        ${beritaHtml}
+      `;
+
+      map.setView([20, 0], 2); // Zoom out ke pandangan seluruh dunia
+      document.getElementById('news-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('news-modal').style.display = 'none';
+    }
+
+    /* RENDER TICKER BERITA */
+    function renderTicker(newsList) {
+      var tickerContent = document.getElementById('ticker-content');
+      if (!newsList || newsList.length === 0) {
+        tickerContent.innerHTML = '<span class="ticker-item">Belum ada berita terbaru.</span>';
+        return;
+      }
+
+      var recentNews = newsList.slice(-12).reverse();
+      var html = "";
+
+      recentNews.forEach(b => {
+        var country = b.Negara || "GLOBAL";
+        var title = b.Judul_Berita || "Tanpa Judul";
+        var link = (b.Link_Berita || "").trim();
+
+        if (link && link !== "#" && !link.startsWith("http")) {
+          link = "https://" + link;
         }
 
-        function styleNegara(feature) {
-            return { fillColor: getColor(feature.id), weight: 1, opacity: 1, color: '#a5b1c2', fillOpacity: 1 };
+        if (link && link !== "#") {
+          html += `<a href="${link}" target="_blank" class="ticker-item">
+                     <span class="ticker-country">[${country}]</span> ${title}
+                   </a> &bull; `;
+        } else {
+          var iso = b.Kode_ISO || "GLOBAL";
+          html += `<span class="ticker-item" onclick="openModal('${iso}')">
+                     <span class="ticker-country">[${country}]</span> ${title}
+                   </span> &bull; `;
         }
+      });
 
-        function onEachFeature(feature, layer) {
-            var negara = dataMakro.find(n => n.Kode_ISO === feature.id);
-            var customCenters = {
-                "RUS": [61.5, 90.0], "USA": [37.0, -95.7], "CAN": [56.1, -106.3], 
-                "FRA": [46.2, 2.2], "IDN": [-0.78, 113.92], "CHN": [35.8, 104.1], 
-                "AUS": [-25.2, 133.7], "BRA": [-14.2, -51.9], "ZAF": [-30.5, 22.9],
-                "JPN": [36.2, 138.2], "MYS": [4.2, 101.9], "VNM": [16.0, 108.0],
-                "NOR": [60.4, 8.4], "PRK": [40.3, 127.5], "SOM": [5.1, 46.1],
-                "IRQ": [33.2, 43.6], "IRN": [32.4, 53.6], "UKR": [48.3, 31.1],
-                "CHE": [46.8, 8.2], "THA": [15.8, 100.9], "TWN": [23.7, 121.0], 
-                "GRL": [72.0, -40.0], "EGY": [26.8, 30.8], "ITA": [42.0, 12.5], 
-                "GRC": [38.5, 22.5], "SYR": [34.8, 38.0], "JOR": [30.5, 36.5]
-            };
-            
-            var centerLatLng = customCenters[feature.id] ? customCenters[feature.id] : layer.getBounds().getCenter();
+      tickerContent.innerHTML = html;
+    }
 
-            if (negara) {
-                L.tooltip({ permanent: true, direction: 'center', className: 'country-label', opacity: 0.9 })
-                .setLatLng(centerLatLng).setContent(negara.Negara).addTo(map);
+    function addStrategicPoints() {
+      [{name:"Selat Hormuz", lat:26.5, lng:56.3}, {name:"Terusan Suez", lat:30.6, lng:32.3}, {name:"Selat Malaka", lat:3.0, lng:101.5}]
+      .forEach(function(p) {
+        L.circleMarker([p.lat, p.lng], {radius: 5, className: 'strategic-point'})
+        .bindTooltip(p.name, {permanent: true, direction: 'auto', offset: [0, -10], className: 'country-label'})
+        .addTo(map);
+      });
+    }
 
-                layer.bindPopup(`
-                    <div style="font-family: Arial, sans-serif; min-width: 200px;">
-                        <h3 style="margin: 0 0 8px 0; border-bottom: 1px solid #ddd; padding-bottom: 4px;">${negara.Negara}</h3>
-                        <p style="margin: 4px 0; font-size: 13px;"><strong>Ekspor:</strong> ${negara.Keunggulan_Ekspor}</p>
-                        <p style="margin: 4px 0; font-size: 13px;"><strong>Impor:</strong> ${negara.Kebutuhan_Impor}</p>
-                        <p style="margin: 4px 0; font-size: 13px;"><strong>Rantai Pasok:</strong> ${negara.Korelasi_Rantai_Pasok}</p>
-                        <p style="margin: 8px 0 0 0; font-size: 12px; text-align: center; border-radius: 4px; padding: 4px; background-color: ${negara.Status_Konflik === 'ON' ? '#ffeaa7' : '#dff9fb'};">
-                        Status: <strong>${negara.Status_Konflik === 'ON' ? '⚠️ KONFLIK' : '✅ STABIL'}</strong>
-                        </p>
-                    </div>
-                `);
-            } else {
-                layer.bindPopup("<b style='font-family:Arial;'>" + feature.properties.name + "</b><br/>Data belum dipantau.");
-            }
+    function addOceanLabels() {
+      [{name:"Samudra Pasifik", lat:0, lng:-150}, {name:"Samudra Atlantik", lat:20, lng:-35}, {name:"Samudra Hindia", lat:-15, lng:75}]
+      .forEach(function(o) {
+        L.tooltip({permanent: true, direction: 'center', className: 'ocean-label'})
+        .setLatLng([o.lat, o.lng]).setContent(o.name).addTo(map);
+      });
+    }
+
+    fetch(apiUrl)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "success") {
+          dataMakro = data.dataMakro || [];
+          dataNews = data.dataNews || [];
+          dataConfig = data.dataConfig || [];
+
+          renderTicker(dataNews);
+
+          var isMaintenance = dataConfig.some(c => {
+            var param = (c.Parameter || "").toString().trim().toLowerCase();
+            var val = (c.Value || "").toString().trim().toUpperCase();
+            return param === "maintenance_mode" && val === "ON";
+          });
+
+          if (isMaintenance) {
+            document.body.innerHTML = `
+              <div style="background-color: #1e272e; color: #f5f6fa; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: Arial, sans-serif; text-align: center; padding: 20px; margin: 0;">
+                <div style="font-size: 60px; margin-bottom: 20px;">🛠️</div>
+                <h1 style="font-size: 26px; margin-bottom: 10px; color: #ffa801; font-weight: bold;">WEBSITE SEDANG DALAM PEMELIHARAAN</h1>
+                <p style="font-size: 15px; color: #dcdde1; max-width: 520px; line-height: 1.6; text-align: center;">
+                  Mohon maaf atas ketidaknyamanan Anda. Saat ini website sedang<br>
+                  dalam proses pemeliharaan. Silakan akses kembali beberapa saat lagi.
+                </p>
+              </div>
+            `;
+            return;
+          }
         }
-
-        function addStrategicPoints() {
-            [{name:"Selat Hormuz", lat:26.5, lng:56.3}, {name:"Terusan Suez", lat:30.6, lng:32.3}, {name:"Selat Malaka", lat:3.0, lng:101.5}]
-            .forEach(function(p) {
-                L.circleMarker([p.lat, p.lng], {radius: 5, className: 'strategic-point'})
-                .bindTooltip(p.name, {permanent: true, direction: 'auto', offset: [0, -10], className: 'country-label'})
-                .addTo(map);
-            });
-        }
-
-        function addOceanLabels() {
-            [{name:"Samudra Pasifik", lat:0, lng:-150}, {name:"Samudra Atlantik", lat:20, lng:-35}, {name:"Samudra Hindia", lat:-15, lng:75}]
-            .forEach(function(o) {
-                L.tooltip({permanent: true, direction: 'center', className: 'ocean-label'})
-                .setLatLng([o.lat, o.lng]).setContent(o.name).addTo(map);
-            });
-        }
-
-        // Jalankan fetch data
-        fetch(apiUrl)
-            .then(r => r.json())
-            .then(data => {
-                if (data.status === "success") dataMakro = data.data;
-                return fetch(geojsonUrl);
-            })
-            .then(r => r.json())
-            .then(geo => {
-                L.geoJson(geo, { style: styleNegara, onEachFeature: onEachFeature }).addTo(map);
-                addStrategicPoints();
-                addOceanLabels();
-            })
-            .catch(e => console.error('Error:', e));
-    </script>
+        return fetch(geojsonUrl);
+      })
+      .then(r => {
+        if (!r) return;
+        return r.json();
+      })
+      .then(geo => {
+        if (!geo) return;
+        mapGeoJsonLayer = L.geoJson(geo, { style: styleNegara, onEachFeature: onEachFeature }).addTo(map);
+        addStrategicPoints();
+        addOceanLabels();
+      })
+      .catch(e => console.error('Error Loading Data:', e));
+  </script>
 </body>
 </html>
