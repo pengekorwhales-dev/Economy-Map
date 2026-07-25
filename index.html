@@ -34,7 +34,7 @@
 
     @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
 
-    /* ALERT BANNER (RUNNING / EMERGENCY ANNOUNCEMENT) */
+    /* ALERT BANNER */
     #alert-banner {
       display: none; position: fixed; top: 38px; left: 0; width: 100%;
       background: #f59e0b; color: #0f172a; font-weight: bold; font-size: 12px;
@@ -131,9 +131,43 @@
     .maintenance-icon { font-size: 50px; margin-bottom: 15px; }
     .maintenance-title { font-size: 22px; font-weight: bold; color: #ef4444; margin-bottom: 10px; }
     .maintenance-desc { font-size: 14px; color: #cbd5e1; line-height: 1.6; }
+
+    /* NOTIFIKASI PEMBUKA (CATATAN PENGGUNA PONSEL) */
+    #notice-modal {
+      display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.85); z-index: 10000;
+      justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
+      backdrop-filter: blur(6px);
+    }
+    .notice-card {
+      background: #1e293b; border: 1px solid #38bdf8; padding: 28px 22px;
+      border-radius: 14px; max-width: 420px; width: 100%; text-align: center;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6); color: #f8fafc;
+    }
+    .notice-icon { font-size: 42px; margin-bottom: 12px; }
+    .notice-title { font-size: 17px; font-weight: bold; color: #38bdf8; margin-bottom: 10px; }
+    .notice-desc { font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px; }
+    .btn-notice {
+      background: #0284c7; color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px;
+      width: 100%; transition: background 0.2s ease;
+    }
+    .btn-notice:hover { background: #0369a1; }
   </style>
 </head>
 <body>
+
+  <!-- POPUP NOTIFIKASI AWAL (MOBILE ROTATION) -->
+  <div id="notice-modal">
+    <div class="notice-card">
+      <div class="notice-icon">📱</div>
+      <div class="notice-title">Catatan untuk Pengguna Ponsel</div>
+      <div class="notice-desc">
+        Disarankan mengaktifkan rotasi layar (mode lanskap) untuk pengalaman menjelajah peta yang lebih optimal, luas, dan nyaman.
+      </div>
+      <button class="btn-notice" onclick="closeNoticeModal()">Siap, Mengerti!</button>
+    </div>
+  </div>
 
   <!-- MAINTENANCE OVERLAY -->
   <div id="maintenance-screen">
@@ -181,6 +215,10 @@
     var dataNews = []; 
     var dataConfig = [];
     var mapGeoJsonLayer = null;
+
+    function closeNoticeModal() {
+      document.getElementById('notice-modal').style.display = 'none';
+    }
 
     function getColor(isoCode) {
       var newsForCountry = dataNews.filter(b => b.Kode_ISO === isoCode);
@@ -418,7 +456,6 @@
           dataNews = data.dataNews || [];
           dataConfig = data.dataConfig || [];
 
-          // Parse System_Config dari Google Sheet
           var configObj = {};
           dataConfig.forEach(item => {
             if (item.Parameter) configObj[item.Parameter.trim()] = item.Value ? item.Value.trim() : "";
@@ -432,7 +469,8 @@
               mDesc.innerText = mRow.Keterangan;
             }
             document.getElementById('maintenance-screen').style.display = 'flex';
-            return null; // Stop render peta
+            document.getElementById('notice-modal').style.display = 'none'; // Sembunyikan notif jika maintenance
+            return null;
           }
 
           // 2. CEK ALERT MESSAGE BANNER
