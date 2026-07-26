@@ -116,6 +116,12 @@
     .ocean-label { background: transparent; border: none; box-shadow: none; color: #74b9ff; font-weight: bold; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
     .strategic-point { background-color: #f39c12; border: 2px solid #fff; border-radius: 50%; }
 
+    /* WIDGET CUACA REAL-TIME */
+    .weather-live-box {
+      background: #0f172a; border: 1px solid #38bdf8; border-radius: 6px;
+      padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+    }
+
     /* MAINTENANCE SCREEN OVERLAY */
     #maintenance-screen {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -163,7 +169,7 @@
       <div class="notice-icon">📱</div>
       <div class="notice-title">Catatan untuk Pengguna Ponsel</div>
       <div class="notice-desc">
-        Disaranteed mengaktifkan rotasi layar (mode lanskap) untuk pengalaman menjelajah peta yang lebih optimal, luas, dan nyaman.
+        Disarankan mengaktifkan rotasi layar (mode lanskap) untuk pengalaman menjelajah peta yang lebih optimal, luas, dan nyaman.
       </div>
       <button class="btn-notice" onclick="closeNoticeModal()">Siap, Mengerti!</button>
     </div>
@@ -220,6 +226,48 @@
       document.getElementById('notice-modal').style.display = 'none';
     }
 
+    /* ENGINE CUACA REAL-TIME (OPEN-METEO) */
+    function translateWeatherCode(code) {
+      if (code === 0) return "☀️ Cerah";
+      if ([1, 2, 3].includes(code)) return "⛅ Cerah Berawan";
+      if ([45, 48].includes(code)) return "🌫️ Berkabut";
+      if ([51, 53, 55, 61, 63, 65].includes(code)) return "🌧️ Hujan / Gerimis";
+      if ([71, 73, 75].includes(code)) return "❄️ Bersalju";
+      if ([80, 81, 82].includes(code)) return "🌧️ Hujan Deras";
+      if ([95, 96, 99].includes(code)) return "🌩️ Badai Petir";
+      return "🌡️ Cuaca Terdeteksi";
+    }
+
+    function fetchLiveWeather(lat, lng, targetElementId) {
+      if (!lat || !lng) return;
+      var url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
+      
+      fetch(url)
+        .then(r => r.json())
+        .then(res => {
+          if (res && res.current_weather) {
+            var temp = res.current_weather.temperature;
+            var wind = res.current_weather.windspeed;
+            var code = res.current_weather.weathercode;
+            var cond = translateWeatherCode(code);
+            var el = document.getElementById(targetElementId);
+            if (el) {
+              el.innerHTML = `
+                <div>
+                  <span style="font-size:15px; font-weight:bold; color:#fbbf24;">${temp}°C</span>
+                  <span style="font-size:12px; color:#cbd5e1; margin-left:6px;">${cond}</span>
+                </div>
+                <div style="font-size:10px; color:#94a3b8;">Angin: <b>${wind} km/h</b></div>
+              `;
+            }
+          }
+        })
+        .catch(e => {
+          var el = document.getElementById(targetElementId);
+          if (el) el.innerHTML = `<span style="color:#94a3b8; font-size:11px;">Gagal memuat cuaca live.</span>`;
+        });
+    }
+
     function getColor(isoCode) {
       var newsForCountry = dataNews.filter(b => b.Kode_ISO === isoCode);
       if (newsForCountry.length > 0) {
@@ -242,18 +290,28 @@
       var customCenters = {
         "RUS": [61.5, 90.0], "USA": [37.0, -95.7], "CAN": [56.1, -106.3], "FRA": [46.2, 2.2], 
         "IDN": [-0.78, 113.92], "CHN": [35.8, 104.1], "AUS": [-25.2, 133.7], "BRA": [-14.2, -51.9], 
-        "ZAF": [-30.5, 22.9], "JPN": [36.2, 138.2], "MEX": [23.6, -102.5]
+        "ZAF": [-30.5, 22.9], "JPN": [36.2, 138.2], "MEX": [23.6, -102.5], "MAR": [31.79, -7.09]
       };
       
       var centerLatLng = customCenters[feature.id] ? customCenters[feature.id] : layer.getBounds().getCenter();
+      var weatherElemId = `popup-weather-${feature.id}`;
 
       if (negara) {
         L.tooltip({ permanent: true, direction: 'center', className: 'country-label', opacity: 0.9 })
         .setLatLng(centerLatLng).setContent(negara.Negara).addTo(map);
 
+        var lat = Array.isArray(centerLatLng) ? centerLatLng[0] : centerLatLng.lat;
+        var lng = Array.isArray(centerLatLng) ? centerLatLng[1] : centerLatLng.lng;
+
         layer.bindPopup(`
           <div class="mini-dossier">
             <div class="mini-title">${negara.Negara}</div>
+
+            <!-- CONTAINER CUACA REAL-TIME -->
+            <div class="weather-live-box" id="${weatherElemId}">
+              <span style="font-size:11px; color:#94a3b8;">🔄 Memuat cuaca real-time...</span>
+            </div>
+
             <div class="mini-grid">
               <div class="mini-card"><div class="mini-label">GDP</div><div class="mini-value">${negara.GDP_Nominal || '-'}</div></div>
               <div class="mini-card"><div class="mini-label">SUKU BUNGA</div><div class="mini-value">${negara.Suku_Bunga || '-'}</div></div>
@@ -263,9 +321,14 @@
             <p style="margin:4px 0; font-size:11px;"><strong>Ekspor:</strong> ${negara.Keunggulan_Ekspor || '-'}</p>
             <p style="margin:4px 0; font-size:11px;"><strong>Impor:</strong> ${negara.Kebutuhan_Impor || '-'}</p>
             <p style="margin:4px 0; font-size:11px;"><strong>Rantai Pasok:</strong> ${negara.Korelasi_Rantai_Pasok || '-'}</p>
-            <button class="btn-news" onclick="openModal('${feature.id}')">📂 Lihat Berita & Intelijen Lengkap</button>
+            <button class="btn-news" onclick="openModal('${feature.id}', ${lat}, ${lng})">📂 Lihat Berita & Intelijen Lengkap</button>
           </div>
         `, { maxWidth: 300 });
+
+        layer.on('popupopen', function() {
+          fetchLiveWeather(lat, lng, weatherElemId);
+        });
+
       } else {
         layer.bindPopup("<b style='color:#fff;'>" + feature.properties.name + "</b><br/><span style='color:#94a3b8; font-size:11px;'>Data belum terdaftar.</span>");
       }
@@ -309,7 +372,7 @@
       setTimeout(() => { openModal(isoCode); }, 1500);
     }
 
-    function openModal(isoCode) {
+    function openModal(isoCode, lat, lng) {
       if (isoCode === "GLOBAL") { openGlobalModal(); return; }
 
       var negara = dataMakro.find(n => n.Kode_ISO === isoCode);
@@ -338,6 +401,7 @@
         beritaHtml = `<div class="news-card" style="border-left: 4px solid #38bdf8;"><h4 class="news-title">TIDAK ADA ISU AKTIF</h4><p class="news-desc">Belum ada laporan krisis mendesak untuk wilayah ini.</p></div>`;
       }
 
+      var modalWeatherElemId = `modal-weather-${isoCode}`;
       var modalBody = document.getElementById('modal-body');
 
       modalBody.innerHTML = `
@@ -378,7 +442,10 @@
           </div>
         </div>
 
-        <div class="dossier-section-title">🌍 GEOGRAFI & ZONA IKLIM</div>
+        <div class="dossier-section-title">🌍 GEOGRAFI, ZONA IKLIM & CUACA REAL-TIME</div>
+        <div class="weather-live-box" id="${modalWeatherElemId}">
+          <span style="font-size:11px; color:#94a3b8;">🔄 Memuat cuaca real-time...</span>
+        </div>
         <div class="risk-box" style="border-left: 4px solid #38bdf8; margin-bottom: 12px;">
           <strong style="color:#38bdf8;">Zona Iklim:</strong> ${negara.Tipe_Zona_Iklim || '-'}<br>
           <strong style="color:#38bdf8;">Catatan Geografi:</strong> ${negara.Catatan_Geografi || '-'}
@@ -394,6 +461,10 @@
       `;
 
       document.getElementById('news-modal').style.display = 'flex';
+
+      if (lat && lng) {
+        fetchLiveWeather(lat, lng, modalWeatherElemId);
+      }
     }
 
     function openGlobalModal() {
@@ -476,7 +547,7 @@
               mDesc.innerText = mRow.Keterangan;
             }
             document.getElementById('maintenance-screen').style.display = 'flex';
-            document.getElementById('notice-modal').style.display = 'none'; // Sembunyikan notif jika maintenance
+            document.getElementById('notice-modal').style.display = 'none';
             return null;
           }
 
