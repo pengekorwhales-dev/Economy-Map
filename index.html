@@ -163,7 +163,7 @@
       <div class="notice-icon">📱</div>
       <div class="notice-title">Catatan untuk Pengguna Ponsel</div>
       <div class="notice-desc">
-        Disarankan mengaktifkan rotasi layar (mode lanskap) untuk pengalaman menjelajah peta yang lebih optimal, luas, dan nyaman.
+        Disaranteed mengaktifkan rotasi layar (mode lanskap) untuk pengalaman menjelajah peta yang lebih optimal, luas, dan nyaman.
       </div>
       <button class="btn-notice" onclick="closeNoticeModal()">Siap, Mengerti!</button>
     </div>
@@ -259,6 +259,7 @@
               <div class="mini-card"><div class="mini-label">SUKU BUNGA</div><div class="mini-value">${negara.Suku_Bunga || '-'}</div></div>
               <div class="mini-card"><div class="mini-label">INFLASI</div><div class="mini-value">${negara.Inflasi_YoY || '-'}</div></div>
             </div>
+            <p style="margin:4px 0; font-size:11px;"><strong>Zona Iklim:</strong> ${negara.Tipe_Zona_Iklim || '-'}</p>
             <p style="margin:4px 0; font-size:11px;"><strong>Ekspor:</strong> ${negara.Keunggulan_Ekspor || '-'}</p>
             <p style="margin:4px 0; font-size:11px;"><strong>Impor:</strong> ${negara.Kebutuhan_Impor || '-'}</p>
             <p style="margin:4px 0; font-size:11px;"><strong>Rantai Pasok:</strong> ${negara.Korelasi_Rantai_Pasok || '-'}</p>
@@ -375,6 +376,12 @@
             <div class="macro-label">KELAS ATAS / ORANG KAYA</div>
             <div class="macro-val-main" style="color:#fbbf24;">${negara.Kelas_Atas_Pct || 'N/A'}</div>
           </div>
+        </div>
+
+        <div class="dossier-section-title">🌍 GEOGRAFI & ZONA IKLIM</div>
+        <div class="risk-box" style="border-left: 4px solid #38bdf8; margin-bottom: 12px;">
+          <strong style="color:#38bdf8;">Zona Iklim:</strong> ${negara.Tipe_Zona_Iklim || '-'}<br>
+          <strong style="color:#38bdf8;">Catatan Geografi:</strong> ${negara.Catatan_Geografi || '-'}
         </div>
 
         <div class="risk-box">
