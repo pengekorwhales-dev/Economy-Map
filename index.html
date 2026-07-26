@@ -510,11 +510,70 @@
       tickerContent.innerHTML = html;
     }
 
+    /* MENAMPILKAN SELURUH PERAIRAN, LAUT, SELAT, DAN SUNGAI STRATEGIS DUNIA */
     function addStrategicPoints() {
-      [{name:"Selat Hormuz", lat:26.5, lng:56.3}, {name:"Terusan Suez", lat:30.6, lng:32.3}, {name:"Selat Malaka", lat:3.0, lng:101.5}]
-      .forEach(p => {
-        L.circleMarker([p.lat, p.lng], {radius: 5, className: 'strategic-point'})
-        .bindTooltip(p.name, {permanent: true, direction: 'auto', offset: [0, -10], className: 'country-label'}).addTo(map);
+      var perairanDunia = [
+        // --- LAUT & TELUK STRATEGIS ---
+        {name:"Laut Kaspia", lat:41.5, lng:51.0},
+        {name:"Laut Merah", lat:20.0, lng:38.5},
+        {name:"Laut Hitam", lat:43.5, lng:34.0},
+        {name:"Laut Azov", lat:46.0, lng:37.0},
+        {name:"Laut Cina Selatan", lat:14.0, lng:113.0},
+        {name:"Laut Cina Timur", lat:29.0, lng:125.0},
+        {name:"Laut Jepang", lat:40.0, lng:135.0},
+        {name:"Laut Kuning", lat:35.0, lng:123.0},
+        {name:"Laut Filipina", lat:20.0, lng:130.0},
+        {name:"Laut Okhotsk", lat:53.0, lng:150.0},
+        {name:"Laut Bering", lat:58.0, lng:-175.0},
+        {name:"Laut Mediterania", lat:35.0, lng:18.0},
+        {name:"Laut Baltik", lat:57.0, lng:20.0},
+        {name:"Laut Utara", lat:56.0, lng:3.0},
+        {name:"Laut Barents", lat:75.0, lng:40.0},
+        {name:"Laut Karibia", lat:15.0, lng:-75.0},
+        {name:"Teluk Persia", lat:27.0, lng:51.0},
+        {name:"Teluk Aden", lat:12.5, lng:48.0},
+        {name:"Teluk Oman", lat:24.5, lng:58.5},
+        {name:"Teluk Benggala", lat:15.0, lng:88.0},
+        {name:"Teluk Meksiko", lat:25.0, lng:-90.0},
+        {name:"Teluk Guinea", lat:1.0, lng:2.0},
+        {name:"Laut Jawa", lat:-5.0, lng:112.0},
+        {name:"Laut Sulawesi", lat:3.0, lng:122.0},
+        {name:"Laut Arafura", lat:-9.0, lng:135.0},
+
+        // --- SELAT & CHOKEPOINTS UTAMA ---
+        {name:"Selat Hormuz", lat:26.5, lng:56.3},
+        {name:"Terusan Suez", lat:30.6, lng:32.3},
+        {name:"Selat Malaka", lat:3.0, lng:101.5},
+        {name:"Selat Bab el-Mandeb", lat:12.6, lng:43.3},
+        {name:"Selat Gibraltar", lat:35.9, lng:-5.5},
+        {name:"Terusan Panama", lat:9.1, lng:-79.7},
+        {name:"Selat Taiwan", lat:24.0, lng:119.5},
+        {name:"Selat Bosporus", lat:41.1, lng:29.0},
+
+        // --- SUNGAI STRATEGIS ---
+        {name:"Sungai Merah (Vietnam)", lat:20.8, lng:106.5},
+        {name:"Sungai Dnieper (Ukraina)", lat:47.5, lng:34.5},
+        {name:"Sungai Nil (Mesir)", lat:26.0, lng:32.8},
+        {name:"Sungai Mekong", lat:10.5, lng:105.2}
+      ];
+
+      perairanDunia.forEach(function(p) {
+        L.circleMarker([p.lat, p.lng], {
+          radius: 4,
+          fillColor: "#38bdf8",
+          color: "#ffffff",
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.9,
+          className: 'strategic-point'
+        })
+        .bindTooltip(p.name, {
+          permanent: true,
+          direction: 'auto',
+          offset: [0, -8],
+          className: 'country-label'
+        })
+        .addTo(map);
       });
     }
 
