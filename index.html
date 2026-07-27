@@ -61,6 +61,33 @@
     .search-result-item { padding: 9px 12px; font-size: 12px; color: #f1f2f6; cursor: pointer; border-bottom: 1px solid #1e293b; }
     .search-result-item:hover { background: #38bdf8; color: #0f172a; }
 
+    /* FLOATING NEWSPAPER ICON BUTTON (POJOK KANAN BAWAH) */
+    #all-news-btn {
+      position: fixed;
+      bottom: 25px;
+      right: 20px;
+      z-index: 997;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid #38bdf8;
+      color: #f8fafc;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s ease;
+    }
+    #all-news-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+      transform: scale(1.08);
+    }
+
     /* LEAFLET POPUP STYLING */
     .leaflet-popup-content-wrapper {
       background: #1e293b !important; color: #f8fafc !important;
@@ -215,6 +242,9 @@
     <input type="text" id="search-input" placeholder="Cari Negara, Selat, Laut, Samudra..." oninput="handleSearchInput()" />
     <div id="search-results"></div>
   </div>
+
+  <!-- TOMBOL IKON KORAN (REKAP ARSIP BERITA DI POJOK KANAN BAWAH) -->
+  <div id="all-news-btn" onclick="openAllNewsArchive()" title="Buka Rekap Semua Berita">📰</div>
 
   <!-- PETA -->
   <div id="map"></div>
@@ -385,7 +415,17 @@
         "SVN": [46.1, 14.9],   // Slovenia
         "HTI": [19.1, -72.3],  // Haiti
         "DOM": [18.7, -70.1],  // Republik Dominika
-        "CUB": [21.5, -79.5]   // Kuba
+        "CUB": [21.8, -79.5],  // Kuba (Disesuaikan presisi daratan)
+        // --- Penyesuaian Presisi Daratan Utama ---
+        "VNM": [14.0, 108.0],  // Vietnam
+        "GIN": [10.0, -10.5],  // Guinea
+        "AUT": [47.3, 13.3],   // Austria
+        "MDA": [47.0, 28.5],   // Moldova
+        "SWE": [62.0, 15.0],   // Swedia
+        "NOR": [61.0, 8.0],    // Norwegia
+        "BHS": [24.5, -77.5],  // Bahama (Disesuaikan presisi daratan kepulauan)
+        "PAN": [8.5, -80.5],   // Panama
+        "CHL": [-33.0, -71.0]  // Chili
       };
       
       var centerLatLng = customCenters[feature.id] ? customCenters[feature.id] : layer.getBounds().getCenter();
@@ -398,14 +438,15 @@
           "TGO", "BEN", "SLE", "LBR", "GNB", "GNQ", "CHE", "AUT", "BEL", "NLD", 
           "DNK", "CZE", "SVK", "HUN", "PRT", "GRC", "SRB", "HRV", "BIH", "SVN", 
           "ALB", "MNE", "MKD", "BGR", "ROU", "BLR", "LTU", "LVA", "EST", "IRL", 
-          "ISR", "LBN", "JOR", "KWT", "QAT", "ARE", "OMN", "YEM", "LUX", "LKA"
+          "ISR", "LBN", "JOR", "KWT", "QAT", "ARE", "OMN", "YEM", "LUX", "LKA",
+          "MDA", "BHS"
         ];
         
         var tier2Medium = [
           "GBR", "DEU", "ITA", "ESP", "UKR", "POL", "SWE", "NOR", "FIN", "VNM", 
           "PHL", "MYS", "KOR", "PRK", "IRQ", "SYR", "TUN", "MAR", "CUB", "GTM", 
           "NIC", "ECU", "BOL", "PRY", "URY", "VEN", "COL", "PER", "CHL", "FRA",
-          "HTI", "SUR", "GUY"
+          "HTI", "SUR", "GUY", "GIN"
         ];
 
         var zoomThreshold = 3; 
@@ -635,6 +676,46 @@
 
       document.getElementById('news-modal').style.display = 'flex';
       fetchLiveWeather(latVal, lngVal, modalWeatherElemId);
+    }
+
+    /* FUNGSI MEMBUKA REKAP / ARSIP SEMUA BERITA (TERBARU DI ATAS) */
+    function openAllNewsArchive() {
+      var modalBody = document.getElementById('modal-body');
+      var listBerita = [...dataNews].reverse(); 
+      var beritaHtml = "";
+
+      if (listBerita.length > 0) {
+        listBerita.forEach(b => {
+          let link = (b.Link_Berita || "").trim();
+          if (link && link !== "#" && !link.startsWith("http")) link = "https://" + link;
+          
+          var threat = (b.Threat_Level || "LOW").toUpperCase();
+          var border = threat === "HIGH" ? "border-left: 4px solid #ef4444;" : threat === "MEDIUM" ? "border-left: 4px solid #f59e0b;" : "border-left: 4px solid #10b981;";
+          var tag = threat === "HIGH" ? `<span class="threat-tag threat-high">🔴 HIGH RISK</span>` : threat === "MEDIUM" ? `<span class="threat-tag threat-medium">🟡 MEDIUM RISK</span>` : `<span class="threat-tag threat-low">🟢 STABIL</span>`;
+          var country = b.Negara || "GLOBAL";
+
+          beritaHtml += `
+            <div class="news-card" style="${border}">
+              <div class="news-header-flex">
+                <h4 class="news-title"><span class="ticker-country">[${country}]</span> ${b.Judul_Berita || "Tanpa Judul"}</h4>
+                ${tag}
+              </div>
+              <p class="news-desc">${b.Ringkasan_Berita || ""}</p>
+              ${link ? `<a href="${link}" target="_blank" class="news-link">Baca Artikel Sumber &rarr;</a>` : ''}
+            </div>
+          `;
+        });
+      } else {
+        beritaHtml = `<div class="news-card" style="border-left: 4px solid #38bdf8;"><h4 class="news-title">TIDAK ADA ARSIP</h4><p class="news-desc">Belum ada data berita yang termuat di sistem.</p></div>`;
+      }
+
+      modalBody.innerHTML = `
+        <h2 class="modal-header-title">📰 REKAPITULASI SEMUA ARSIP BERITA & INTELIJEN</h2>
+        <div class="risk-box">Menampilkan seluruh daftar berita geopolitik dan ekonomi global. Artikel terbaru otomatis tersusun di urutan paling atas. Total arsip aktif: <b>${listBerita.length} berita</b>.</div>
+        ${beritaHtml}
+      `;
+
+      document.getElementById('news-modal').style.display = 'flex';
     }
 
     function openModal(isoCode, lat, lng) {
